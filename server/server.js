@@ -10,7 +10,7 @@ const startServer = async () => {
   await connectDB();
 
   app.listen(PORT, () => {
-    console.log(`CollabSpace server running on port ${PORT}`);
+    console.log(`Syncly server running on port ${PORT}`);
   });
 };
 

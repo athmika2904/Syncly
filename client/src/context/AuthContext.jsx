@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-
+  const [token,setToken]=useState(null);
   const signup = async (name, email, password) => {
     const response = await api.post("/auth/signup", {
       name,
@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     setUser(response.data.user);
-
+    setToken(response.data.token);
     return response.data;
   };
 
@@ -25,12 +25,13 @@ export const AuthProvider = ({ children }) => {
     });
 
     setUser(response.data.user);
-
+    setToken(response.data.token);
     return response.data;
   };
 
   const logout = () => {
     setUser(null);
+    setToken(null);
   };
 
   return (

@@ -1,5 +1,10 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import {
+  BrowserRouter,
+  Routes,
+  Route
+} from "react-router-dom";
+
+import { AuthProvider } from "./context/Authcontext";
 
 import MainLayout from "./layouts/MainLayout";
 import Landing from "./pages/Landing";
@@ -14,11 +19,21 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<MainLayout />}>
-            <Route path="/" element={<Landing />} />
 
-            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={<Landing />}
+            />
 
-            <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/login"
+              element={<Login />}
+            />
+
+            <Route
+              path="/signup"
+              element={<Signup />}
+            />
 
             <Route
               path="/dashboard"
@@ -28,6 +43,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
           </Route>
         </Routes>
       </BrowserRouter>

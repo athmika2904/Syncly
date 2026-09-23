@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/Authcontext";
 import api from "../services/api";
-
+import { Link } from "react-router-dom";
 const Dashboard = () => {
   const { user, token, logout } = useAuth();
 
@@ -211,10 +211,11 @@ const Dashboard = () => {
             <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
 
               {workspaces.map((workspace) => (
-                <div
-                  key={workspace._id}
-                  className="group rounded-lg border border-stone-200 bg-[#faf9f5] p-7 transition hover:-translate-y-1 hover:border-[#68705a] hover:shadow-[0_15px_40px_rgba(37,37,34,0.07)]"
-                >
+                <Link
+                    key={workspace._id}
+                    to={`/workspace/${workspace._id}`}
+                    className="group block rounded-lg border border-stone-200 bg-[#faf9f5] p-7 transition hover:-translate-y-1 hover:border-[#68705a] hover:shadow-[0_15px_40px_rgba(37,37,34,0.07)]"
+                  >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold tracking-[0.15em] text-[#68705a]">
@@ -239,7 +240,7 @@ const Dashboard = () => {
                   <div className="mt-6 border-t border-stone-200 pt-4 text-xs text-stone-400">
                     Created {new Date(workspace.createdAt).toLocaleDateString()}
                   </div>
-                </div>
+                </Link>
               ))}
 
             </div>

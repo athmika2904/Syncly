@@ -5,7 +5,7 @@ import {
 } from "react-router-dom";
 
 import { AuthProvider } from "./context/Authcontext";
-
+import Workspace from "./pages/Workspace";
 import MainLayout from "./layouts/MainLayout";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -40,6 +40,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workspace/:workspaceId"
+              element={
+                <ProtectedRoute>
+                  <Workspace />
                 </ProtectedRoute>
               }
             />

@@ -47,3 +47,28 @@ export const getWorkspaces = async (req, res) => {
     });
   }
 };
+export const getWorkspace = async (req, res) => {
+  try {
+    const workspace = await Workspace.findOne({
+      _id: req.params.workspaceId,
+      owner: req.user.userId
+    });
+
+    if (!workspace) {
+      return res.status(404).json({
+        success: false,
+        message: "Workspace not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      workspace
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};

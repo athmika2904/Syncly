@@ -57,24 +57,32 @@ export const getWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
 
-    const membership = await WorkspaceMember.findOne({
-      workspace: workspaceId,
-      user: req.user.userId
-    });
-
-    if (!membership) {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have access to this workspace"
-      });
-    }
-
     const workspace = await Workspace.findById(workspaceId);
 
     if (!workspace) {
       return res.status(404).json({
         success: false,
         message: "Workspace not found"
+      });
+    }
+
+    let membership = await WorkspaceMember.findOne({
+      workspace: workspaceId,
+      user: req.user.userId
+    });
+
+    if (!membership && workspace.owner.toString() === req.user.userId) {
+      membership = await WorkspaceMember.create({
+        workspace: workspaceId,
+        user: req.user.userId,
+        role: "owner"
+      });
+    }
+
+    if (!membership) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this workspace"
       });
     }
 
@@ -159,10 +167,27 @@ export const getMembers = async (req, res) => {
   try {
     const { workspaceId } = req.params;
 
-    const membership = await WorkspaceMember.findOne({
+    const workspace = await Workspace.findById(workspaceId);
+
+    if (!workspace) {
+      return res.status(404).json({
+        success: false,
+        message: "Workspace not found"
+      });
+    }
+
+    let membership = await WorkspaceMember.findOne({
       workspace: workspaceId,
       user: req.user.userId
     });
+
+    if (!membership && workspace.owner.toString() === req.user.userId) {
+      membership = await WorkspaceMember.create({
+        workspace: workspaceId,
+        user: req.user.userId,
+        role: "owner"
+      });
+    }
 
     if (!membership) {
       return res.status(403).json({

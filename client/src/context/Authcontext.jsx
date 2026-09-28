@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from "react";
 import api from "../services/api";
 
-const AuthContext = createContext(null);
+const Authcontext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider
+    <Authcontext.Provider
       value={{
         user,
         token,
@@ -46,12 +46,12 @@ export const AuthProvider = ({ children }) => {
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </Authcontext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(Authcontext);
 
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider");

@@ -35,11 +35,18 @@ export const createWorkspace = async (req, res) => {
     });
   }
 };
-
 export const getWorkspaces = async (req, res) => {
   try {
+    const memberships = await WorkspaceMember.find({
+      user: req.user.userId
+    }).select("workspace");
+
+    const workspaceIds = memberships.map(
+      (membership) => membership.workspace
+    );
+
     const workspaces = await Workspace.find({
-      owner: req.user.userId
+      _id: { $in: workspaceIds }
     }).sort({ createdAt: -1 });
 
     res.status(200).json({

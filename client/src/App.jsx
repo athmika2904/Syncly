@@ -3,7 +3,6 @@ import {
   Routes,
   Route
 } from "react-router-dom";
-
 import { AuthProvider } from "./context/Authcontext";
 import Workspace from "./pages/Workspace";
 import MainLayout from "./layouts/MainLayout";
@@ -12,7 +11,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import Document from "./pages/Document";
 function App() {
   return (
     <AuthProvider>
@@ -51,7 +50,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
+            <Route
+              path="/document/:documentId"
+              element={
+                <ProtectedRoute>
+                  <Document />
+                </ProtectedRoute>
+              }
+            />
           </Route>
         </Routes>
       </BrowserRouter>

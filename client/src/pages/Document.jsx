@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/Authcontext";
+import Comments from "../components/Comments";
 import api from "../services/api";
 
 const Document = () => {
   const { documentId } = useParams();
-  const { token } = useAuth();
+  const { token,user } = useAuth();
 
   const socketRef = useRef(null);
 
@@ -139,7 +140,7 @@ const Document = () => {
 
   return (
     <div className="min-h-[calc(100vh-78px)] bg-[#f4f1e9] text-[#252522]">
-      <div className="mx-auto max-w-5xl px-6 py-10 sm:px-10">
+      <div className="mx-auto max-w-7xl px-6 py-10 sm:px-10">
         <Link
           to={`/workspace/${document.workspace}`}
           className="text-sm text-stone-500 transition hover:text-[#252522]"
@@ -171,14 +172,21 @@ const Document = () => {
           </div>
         </div>
 
-        <div className="mt-8">
-          <textarea
-            value={content}
-            onChange={handleChange}
-            placeholder="Start writing..."
-            className="min-h-[60vh] w-full resize-none border-0 bg-transparent text-base leading-8 text-[#252522] outline-none placeholder:text-stone-400"
-          />
-        </div>
+        <div className="mt-8 flex gap-8">
+  <div className="min-w-0 flex-1">
+    <textarea
+      value={content}
+      onChange={handleChange}
+      placeholder="Start writing..."
+      className="min-h-[60vh] w-full resize-none border-0 bg-transparent text-base leading-8 text-[#252522] outline-none placeholder:text-stone-400"
+    />
+  </div>
+
+  <Comments
+    documentId={documentId}
+    user={user}
+  />
+</div>
       </div>
     </div>
   );

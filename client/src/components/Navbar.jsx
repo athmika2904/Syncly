@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/Authcontext";
+import Notifications from "../components/Notification";
 
 const Navbar = () => {
   const { isAuthenticated } = useAuth();
@@ -32,12 +33,16 @@ const Navbar = () => {
               </Link>
             </>
           ) : (
-            <Link
-              to="/dashboard"
-              className="rounded border border-stone-300 px-5 py-2.5 text-sm font-semibold text-[#252522] transition hover:border-[#68705a] hover:bg-[#faf9f5]"
-            >
-              Dashboard
-            </Link>
+            <>
+              <Notifications />
+
+              <Link
+                to="/dashboard"
+                className="rounded border border-stone-300 px-5 py-2.5 text-sm font-semibold text-[#252522] transition hover:border-[#68705a] hover:bg-[#faf9f5]"
+              >
+                Dashboard
+              </Link>
+            </>
           )}
         </div>
       </div>

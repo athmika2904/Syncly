@@ -5,6 +5,7 @@ import healthRoutes from "./routes/healthRoutes.js";
 import authRoutes from "./routes/authRoutes.js"
 import workspaceRoutes from "./routes/workspaceRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js"
 const app = express();
 
 app.use(cors());
@@ -15,4 +16,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/comments", commentRoutes);
+
+app.use("/api/notifications", notificationRoutes);
+
 export default app;

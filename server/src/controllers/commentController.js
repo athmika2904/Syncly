@@ -1,6 +1,7 @@
 import Comment from "../models/Comment.js";
 import Document from "../models/Document.js";
 import WorkspaceMember from "../models/WorkspaceMember.js";
+import Notification from "../models/Notification.js";
 
 export const createComment = async (req, res) => {
   try {
@@ -44,13 +45,58 @@ export const createComment = async (req, res) => {
     const populatedComment = await Comment.findById(comment._id)
       .populate("user", "name email");
 
-    res.status(201).json({
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`document:${documentId}`).emit(
+        "comment:created",
+        populatedComment
+      );
+    }
+
+    const members = await WorkspaceMember.find({
+      workspace: document.workspace,
+      user: { $ne: req.user.userId }
+    }).select("user");
+
+    const notifications = await Promise.all(
+      members.map(async (member) => {
+        const notification = await Notification.create({
+          recipient: member.user,
+          actor: req.user.userId,
+          type: "comment",
+          message: `commented on "${document.title}"`,
+          workspace: document.workspace,
+          document: document._id
+        });
+
+        const populatedNotification = await Notification.findById(
+          notification._id
+        )
+          .populate("actor", "name")
+          .populate("workspace", "name")
+          .populate("document", "title");
+
+        if (io) {
+          io.to(`user:${member.user}`).emit(
+            "notification:new",
+            populatedNotification
+          );
+        }
+
+        return populatedNotification;
+      })
+    );
+
+    return res.status(201).json({
       success: true,
       message: "Comment added successfully",
       comment: populatedComment
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Create comment error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
@@ -88,12 +134,14 @@ export const getComments = async (req, res) => {
       .populate("user", "name email")
       .sort({ createdAt: 1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       comments
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get comments error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
@@ -135,13 +183,24 @@ export const updateComment = async (req, res) => {
     const updatedComment = await Comment.findById(comment._id)
       .populate("user", "name email");
 
-    res.status(200).json({
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`document:${comment.document}`).emit(
+        "comment:updated",
+        updatedComment
+      );
+    }
+
+    return res.status(200).json({
       success: true,
       message: "Comment updated successfully",
       comment: updatedComment
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Update comment error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
@@ -168,14 +227,27 @@ export const deleteComment = async (req, res) => {
       });
     }
 
+    const documentId = comment.document;
+
     await Comment.findByIdAndDelete(commentId);
 
-    res.status(200).json({
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`document:${documentId}`).emit(
+        "comment:deleted",
+        commentId
+      );
+    }
+
+    return res.status(200).json({
       success: true,
       message: "Comment deleted successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Delete comment error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });

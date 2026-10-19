@@ -10,7 +10,7 @@ const Document = () => {
   const { token,user } = useAuth();
 
   const socketRef = useRef(null);
-
+  const [socket, setSocket] = useState(null);
   const [document, setDocument] = useState(null);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,7 @@ const Document = () => {
         });
 
         socketRef.current = socket;
+        setSocket(socket)
 
         socket.on("connect", () => {
           setConnected(true);
@@ -185,6 +186,7 @@ const Document = () => {
   <Comments
     documentId={documentId}
     user={user}
+    socket={socket}
   />
 </div>
       </div>

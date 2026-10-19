@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/Authcontext";
 import api from "../services/api";
 
-const Comments = ({ documentId, user }) => {
+const Comments = ({ documentId, user, socket }) => {
   const { token } = useAuth();
 
   const [comments, setComments] = useState([]);
@@ -36,7 +36,43 @@ const Comments = ({ documentId, user }) => {
 
     fetchComments();
   }, [documentId, token]);
+  useEffect(() => {
+  if (!socket) return;
 
+  const handleCommentCreated = (comment) => {
+    setComments((prev) => {
+      if (prev.some((item) => item._id === comment._id)) {
+        return prev;
+      }
+
+      return [...prev, comment];
+    });
+  };
+
+  const handleCommentUpdated = (comment) => {
+    setComments((prev) =>
+      prev.map((item) =>
+        item._id === comment._id ? comment : item
+      )
+    );
+  };
+
+  const handleCommentDeleted = (commentId) => {
+    setComments((prev) =>
+      prev.filter((item) => item._id !== commentId)
+    );
+  };
+
+  socket.on("comment:created", handleCommentCreated);
+  socket.on("comment:updated", handleCommentUpdated);
+  socket.on("comment:deleted", handleCommentDeleted);
+
+  return () => {
+    socket.off("comment:created", handleCommentCreated);
+    socket.off("comment:updated", handleCommentUpdated);
+    socket.off("comment:deleted", handleCommentDeleted);
+  };
+}, [socket]);
   const handleAddComment = async () => {
     if (!content.trim()) return;
 
@@ -55,7 +91,7 @@ const Comments = ({ documentId, user }) => {
         }
       );
 
-      setComments((prev) => [...prev, response.data.comment]);
+      
       setContent("");
     } catch (error) {
       console.error("Failed to add comment", error);
@@ -80,13 +116,7 @@ const Comments = ({ documentId, user }) => {
         }
       );
 
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment._id === commentId
-            ? response.data.comment
-            : comment
-        )
-      );
+      
 
       setEditingId(null);
       setEditContent("");
@@ -103,9 +133,7 @@ const Comments = ({ documentId, user }) => {
         }
       });
 
-      setComments((prev) =>
-        prev.filter((comment) => comment._id !== commentId)
-      );
+      
     } catch (error) {
       console.error("Failed to delete comment", error);
     }

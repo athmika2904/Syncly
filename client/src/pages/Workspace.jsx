@@ -28,7 +28,10 @@ const Workspace = () => {
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentLoading, setDocumentLoading] = useState(false);
   const [documentError, setDocumentError] = useState("");
-
+  const [activities, setActivities] = useState([]);
+const [activityTotal, setActivityTotal] = useState(0);
+const [activityLoading, setActivityLoading] = useState(true);
+const [activityError, setActivityError] = useState("");
   const fetchWorkspace = async () => {
     try {
       const response = await api.get(
@@ -95,13 +98,37 @@ const Workspace = () => {
       setDocumentsLoading(false);
     }
   };
+  const fetchActivity = async () => {
+  try {
+    setActivityError("");
 
+    const response = await api.get(
+      `/activities/workspace/${workspaceId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    setActivities(response.data.activities || []);
+    setActivityTotal(response.data.total || 0);
+  } catch (error) {
+    setActivityError(
+      error.response?.data?.message ||
+      "Failed to load activity"
+    );
+  } finally {
+    setActivityLoading(false);
+  }
+};
   useEffect(() => {
     if (!token) return;
 
     fetchWorkspace();
     fetchMembers();
     fetchDocuments();
+    fetchActivity();
   }, [workspaceId, token]);
 
   const handleCreateDocument = async (e) => {
@@ -279,21 +306,71 @@ const Workspace = () => {
           </div>
 
           <div className="rounded-lg border border-stone-200 bg-[#faf9f5] p-7">
+  <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+    Activity
+  </p>
 
-            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-              Activity
-            </p>
+  <p className="mt-5 font-serif text-4xl">
+    {activityLoading ? "…" : activityError ? "—" : activityTotal}
+  </p>
 
-            <p className="mt-5 font-serif text-4xl">
-              —
-            </p>
+  <p className="mt-2 text-sm text-stone-500">
+    Recorded workspace events
+  </p>
+</div>
+<div className="mt-8 rounded-lg border border-stone-200 bg-[#faf9f5]">
+  <div className="border-b border-stone-200 px-7 py-6">
+    <p className="text-xs font-semibold tracking-[0.18em] text-[#68705a]">
+      WORKSPACE HISTORY
+    </p>
 
-            <p className="mt-2 text-sm text-stone-500">
-              Workspace activity
-            </p>
+    <h2 className="mt-2 font-serif text-3xl tracking-[-0.03em]">
+      Recent activity
+    </h2>
+  </div>
 
+  {activityLoading ? (
+    <p className="px-7 py-8 text-sm text-stone-500">
+      Loading activity...
+    </p>
+  ) : activityError ? (
+    <p className="px-7 py-8 text-sm text-[#a44b42]">
+      {activityError}
+    </p>
+  ) : activities.length === 0 ? (
+    <p className="px-7 py-8 text-sm text-stone-500">
+      No activity recorded yet. Create or edit a document to get started.
+    </p>
+  ) : (
+    <div>
+      {activities.map((activity) => (
+        <div
+          key={activity._id}
+          className="flex items-start gap-4 border-b border-stone-200 px-7 py-5 last:border-b-0"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#68705a]/10 text-[#68705a]">
+            <span className="text-lg">
+              {activity.type === "document_created" ? "+" : "↻"}
+            </span>
           </div>
 
+          <div className="min-w-0 flex-1">
+            <p className="text-sm leading-6">
+              <span className="font-semibold">
+                {activity.user?.name || "A team member"}
+              </span>{" "}
+              {activity.description}
+            </p>
+
+            <p className="mt-1 text-xs text-stone-400">
+              {new Date(activity.createdAt).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>+
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.3fr_1fr]">

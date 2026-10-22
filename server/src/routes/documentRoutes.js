@@ -1,13 +1,19 @@
+
 import express from "express";
 
 import {
   createDocument,
-  getDocuments,getDocument,updateDocument
+  getDocuments,
+  getDocument,
+  updateDocument,
+  searchDocuments
 } from "../controllers/documentController.js";
 
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+
+router.get("/search", authMiddleware, searchDocuments);
 
 router.post(
   "/workspace/:workspaceId",
@@ -20,15 +26,9 @@ router.get(
   authMiddleware,
   getDocuments
 );
-router.get(
-  "/:documentId",
-  authMiddleware,
-  getDocument
-);
 
-router.put(
-  "/:documentId",
-  authMiddleware,
-  updateDocument
-);
+router.get("/:documentId", authMiddleware, getDocument);
+
+router.put("/:documentId", authMiddleware, updateDocument);
+
 export default router;

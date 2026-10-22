@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/Authcontext";
 import api from "../services/api";
 import { Link } from "react-router-dom";
+import DocumentSearch from "../components/DocumentSearch";
 const Dashboard = () => {
   const { user, token, logout } = useAuth();
 
@@ -81,8 +82,11 @@ const Dashboard = () => {
   return (
     <div className="min-h-[calc(100vh-78px)] bg-[#f4f1e9] text-[#252522]">
       <div className="mx-auto max-w-7xl px-6 py-10 sm:px-10 lg:px-16">
-
+          <div className="mb-8">
+              <DocumentSearch />
+          </div>
         <div className="flex flex-col gap-8 border-b border-stone-300 pb-8 sm:flex-row sm:items-end sm:justify-between">
+          
           <div>
             <p className="text-xs font-semibold tracking-[0.2em] text-[#68705a]">
               YOUR WORKSPACE

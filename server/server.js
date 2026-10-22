@@ -1,22 +1,33 @@
+
+import "dotenv/config";
+
 import http from "http";
 import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
-import dotenv from "dotenv";
 
 import app from "./src/app.js";
 import connectDB from "./src/config/db.js";
 import Comment from "./src/models/Comment.js";
-dotenv.config();
+import Document from "./src/models/Document.js";
+import WorkspaceMember from "./src/models/WorkspaceMember.js";
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
   }
 });
+
 app.set("io", io);
+
+const respond = (callback, data) => {
+  if (typeof callback === "function") {
+    callback(data);
+  }
+};
+
 io.use((socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
@@ -25,13 +36,9 @@ io.use((socket, next) => {
       return next(new Error("Authentication required"));
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     socket.userId = decoded.userId;
-
     next();
   } catch (error) {
     next(new Error("Invalid or expired token"));
@@ -40,17 +47,25 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   socket.join(`user:${socket.userId}`);
+
   console.log("User connected:", socket.userId);
 
   socket.on("document:join", async (documentId, callback) => {
     try {
-      const Document = (await import("./src/models/Document.js")).default;
-      const WorkspaceMember = (await import("./src/models/WorkspaceMember.js")).default;
+      if (
+        typeof documentId !== "string" ||
+        !documentId.trim()
+      ) {
+        return respond(callback, {
+          success: false,
+          message: "A valid document ID is required"
+        });
+      }
 
       const document = await Document.findById(documentId);
 
       if (!document) {
-        return callback({
+        return respond(callback, {
           success: false,
           message: "Document not found"
         });
@@ -62,7 +77,7 @@ io.on("connection", (socket) => {
       });
 
       if (!membership) {
-        return callback({
+        return respond(callback, {
           success: false,
           message: "You do not have access to this document"
         });
@@ -70,33 +85,45 @@ io.on("connection", (socket) => {
 
       socket.join(`document:${documentId}`);
 
-      callback({
+      return respond(callback, {
         success: true,
         content: document.content || ""
       });
     } catch (error) {
-      callback({
+      console.error("Document join error:", error);
+
+      return respond(callback, {
         success: false,
         message: "Failed to join document"
       });
     }
   });
 
-  socket.on("document:change", async ({ documentId, content }) => {
+  socket.on("document:change", async (payload) => {
     try {
-      const Document = (await import("./src/models/Document.js")).default;
-      const WorkspaceMember = (await import("./src/models/WorkspaceMember.js")).default;
+      const { documentId, content } = payload || {};
+
+      if (
+        typeof documentId !== "string" ||
+        typeof content !== "string"
+      ) {
+        return;
+      }
 
       const document = await Document.findById(documentId);
 
-      if (!document) return;
+      if (!document) {
+        return;
+      }
 
       const membership = await WorkspaceMember.findOne({
         workspace: document.workspace,
         user: socket.userId
       });
 
-      if (!membership) return;
+      if (!membership) {
+        return;
+      }
 
       document.content = content;
       document.updatedBy = socket.userId;
@@ -110,15 +137,26 @@ io.on("connection", (socket) => {
       console.error("Document change error:", error);
     }
   });
-    socket.on("comment:created", async ({ documentId, content }, callback) => {
+
+  socket.on("comment:created", async (payload, callback) => {
     try {
-      const Document = (await import("./src/models/Document.js")).default;
-      const WorkspaceMember = (await import("./src/models/WorkspaceMember.js")).default;
+      const { documentId, content } = payload || {};
+
+      if (
+        typeof documentId !== "string" ||
+        typeof content !== "string" ||
+        !content.trim()
+      ) {
+        return respond(callback, {
+          success: false,
+          message: "Document ID and comment content are required"
+        });
+      }
 
       const document = await Document.findById(documentId);
 
       if (!document) {
-        return callback?.({
+        return respond(callback, {
           success: false,
           message: "Document not found"
         });
@@ -130,14 +168,14 @@ io.on("connection", (socket) => {
       });
 
       if (!membership) {
-        return callback?.({
+        return respond(callback, {
           success: false,
           message: "You do not have access to this document"
         });
       }
 
       const comment = await Comment.create({
-        content,
+        content: content.trim(),
         document: documentId,
         user: socket.userId
       });
@@ -150,39 +188,73 @@ io.on("connection", (socket) => {
         populatedComment
       );
 
-      callback?.({
+      return respond(callback, {
         success: true,
         comment: populatedComment
       });
     } catch (error) {
       console.error("Comment creation error:", error);
 
-      callback?.({
+      return respond(callback, {
         success: false,
         message: "Failed to create comment"
       });
     }
   });
 
-  socket.on("comment:updated", async ({ commentId, content }, callback) => {
+  socket.on("comment:updated", async (payload, callback) => {
     try {
+      const { commentId, content } = payload || {};
+
+      if (
+        typeof commentId !== "string" ||
+        typeof content !== "string" ||
+        !content.trim()
+      ) {
+        return respond(callback, {
+          success: false,
+          message: "Comment ID and content are required"
+        });
+      }
+
       const comment = await Comment.findById(commentId);
 
       if (!comment) {
-        return callback?.({
+        return respond(callback, {
           success: false,
           message: "Comment not found"
         });
       }
 
       if (String(comment.user) !== String(socket.userId)) {
-        return callback?.({
+        return respond(callback, {
           success: false,
           message: "You can only edit your own comments"
         });
       }
 
-      comment.content = content;
+      const document = await Document.findById(comment.document);
+
+      if (!document) {
+        return respond(callback, {
+          success: false,
+          message: "Document not found"
+        });
+      }
+
+      const membership = await WorkspaceMember.findOne({
+        workspace: document.workspace,
+        user: socket.userId
+      });
+
+      if (!membership) {
+        return respond(callback, {
+          success: false,
+          message: "You do not have access to this document"
+        });
+      }
+
+      comment.content = content.trim();
       await comment.save();
 
       const populatedComment = await Comment.findById(comment._id)
@@ -193,14 +265,14 @@ io.on("connection", (socket) => {
         populatedComment
       );
 
-      callback?.({
+      return respond(callback, {
         success: true,
         comment: populatedComment
       });
     } catch (error) {
       console.error("Comment update error:", error);
 
-      callback?.({
+      return respond(callback, {
         success: false,
         message: "Failed to update comment"
       });
@@ -209,23 +281,51 @@ io.on("connection", (socket) => {
 
   socket.on("comment:deleted", async (commentId, callback) => {
     try {
+      if (typeof commentId !== "string") {
+        return respond(callback, {
+          success: false,
+          message: "A valid comment ID is required"
+        });
+      }
+
       const comment = await Comment.findById(commentId);
 
       if (!comment) {
-        return callback?.({
+        return respond(callback, {
           success: false,
           message: "Comment not found"
         });
       }
 
       if (String(comment.user) !== String(socket.userId)) {
-        return callback?.({
+        return respond(callback, {
           success: false,
           message: "You can only delete your own comments"
         });
       }
 
-      const documentId = comment.document;
+      const document = await Document.findById(comment.document);
+
+      if (!document) {
+        return respond(callback, {
+          success: false,
+          message: "Document not found"
+        });
+      }
+
+      const membership = await WorkspaceMember.findOne({
+        workspace: document.workspace,
+        user: socket.userId
+      });
+
+      if (!membership) {
+        return respond(callback, {
+          success: false,
+          message: "You do not have access to this document"
+        });
+      }
+
+      const documentId = String(comment.document);
 
       await comment.deleteOne();
 
@@ -234,20 +334,23 @@ io.on("connection", (socket) => {
         commentId
       );
 
-      callback?.({
+      return respond(callback, {
         success: true
       });
     } catch (error) {
       console.error("Comment deletion error:", error);
 
-      callback?.({
+      return respond(callback, {
         success: false,
         message: "Failed to delete comment"
       });
     }
   });
+
   socket.on("document:leave", (documentId) => {
-    socket.leave(`document:${documentId}`);
+    if (typeof documentId === "string") {
+      socket.leave(`document:${documentId}`);
+    }
   });
 
   socket.on("disconnect", () => {
@@ -255,17 +358,19 @@ io.on("connection", (socket) => {
   });
 });
 
-
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
 
-  server.listen(PORT, () => {
-    console.log(
-      `Syncly API and Socket.IO running on port ${PORT}`
-    );
-  });
+    server.listen(PORT, () => {
+      console.log(`Syncly API and Socket.IO running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start Syncly server:", error);
+    process.exit(1);
+  }
 };
 
 startServer();

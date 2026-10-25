@@ -3,6 +3,7 @@ import Document from "../models/Document.js";
 import Workspace from "../models/Workspace.js";
 import WorkspaceMember from "../models/WorkspaceMember.js";
 import Activity from "../models/Activity.js";
+
 export const createDocument = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -36,25 +37,41 @@ export const createDocument = async (req, res) => {
       });
     }
 
-    try {
-  await Activity.create({
-    workspace: workspaceId,
-    user: req.user.userId,
-    type: "document_created",
-    document: document._id,
-    description: `created the document "${document.title}"`
-  });
-} catch (activityError) {
-  console.error("Failed to record document creation:", activityError);
-}
+    // 1. Create the document first
+    const document = await Document.create({
+      title: title.trim(),
+      content: "",
+      workspace: workspaceId,
+      createdBy: req.user.userId,
+      updatedBy: req.user.userId
+    });
 
-    res.status(201).json({
+    // 2. Record the activity using the created document
+    try {
+      await Activity.create({
+        workspace: workspaceId,
+        user: req.user.userId,
+        type: "document_created",
+        document: document._id,
+        description: `created the document "${document.title}"`
+      });
+    } catch (activityError) {
+      console.error(
+        "Failed to record document creation:",
+        activityError
+      );
+    }
+
+    // 3. Return the created document
+    return res.status(201).json({
       success: true,
       message: "Document created successfully",
       document
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Create document error:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });

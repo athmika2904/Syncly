@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/Authcontext";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, sessionExpired } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Page the user was on before being signed out (set by ProtectedRoute).
+  const from = location.state?.from;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +24,15 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate("/dashboard");
+
+      // After an expired session, return to where they were.
+      // After a normal log out, start at the dashboard.
+      navigate(
+        sessionExpired && from
+          ? `${from.pathname}${from.search || ""}`
+          : "/dashboard",
+        { replace: true }
+      );
     } catch (error) {
       setError(
         error.response?.data?.message ||
@@ -83,6 +95,15 @@ const Login = () => {
                 className="rounded border border-stone-300 bg-[#f4f1e9]/50 px-4 py-3.5 text-sm text-[#252522] outline-none transition focus:border-[#68705a] focus:bg-[#faf9f5] focus:ring-4 focus:ring-[#68705a]/10"
               />
             </div>
+
+            {sessionExpired && !error && (
+              <p
+                role="status"
+                className="rounded border border-[#68705a]/30 bg-[#68705a]/10 px-4 py-3 text-sm text-[#4f5744]"
+              >
+                Your session has expired. Please log in again.
+              </p>
+            )}
 
             {error && (
               <p className="text-sm text-[#a44b42]">

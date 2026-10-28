@@ -4,14 +4,24 @@ import User from "../models/User.js";
 
 export const signup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email: rawEmail, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !rawEmail || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required"
       });
     }
+
+
+    if (typeof password !== "string" || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters"
+      });
+    }
+
+    const email = String(rawEmail).toLowerCase().trim();
 
     const existingUser = await User.findOne({ email });
 
@@ -47,6 +57,16 @@ export const signup = async (req, res) => {
       }
     });
   } catch (error) {
+    
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "User already exists"
+      });
+    }
+
+    console.error("Signup error:", error);
+
     res.status(500).json({
       success: false,
       message: "Server error"
@@ -56,14 +76,16 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
 
-    if (!email || !password) {
+    if (!rawEmail || !password) {
       return res.status(400).json({
         success: false,
         message: "Email and password are required"
       });
     }
+
+    const email = String(rawEmail).toLowerCase().trim();
 
     const user = await User.findOne({ email });
 
@@ -103,6 +125,8 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error("Login error:", error);
+
     res.status(500).json({
       success: false,
       message: "Server error"

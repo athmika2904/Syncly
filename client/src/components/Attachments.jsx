@@ -1,11 +1,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Paperclip, Upload, FileText, Image, ExternalLink } from "lucide-react";
-import { io } from "socket.io-client";
 import api from "../services/api";
 import { useAuth } from "../context/Authcontext";
 
-const Attachments = ({ documentId }) => {
+const Attachments = ({ documentId, socket }) => {
   const { token } = useAuth();
   const inputRef = useRef(null);
   const [attachments, setAttachments] = useState([]);
@@ -39,30 +38,34 @@ const Attachments = ({ documentId }) => {
 
     fetchAttachments();
 
-    const socket = io("http://localhost:5000", {
-      auth: { token }
-    });
-
-    socket.emit("document:join", { documentId });
-
-    socket.on("attachment:created", (attachment) => {
-      if (active) {
-        setAttachments((current) => {
-          if (current.some((item) => item._id === attachment._id)) {
-            return current;
-          }
-
-          return [attachment, ...current];
-        });
-      }
-    });
-
     return () => {
       active = false;
-      socket.emit("document:leave", { documentId });
-      socket.disconnect();
     };
   }, [documentId, token]);
+
+  // Live updates arrive on the socket that Document.jsx already joined to
+  // this document's room. (The old code opened a second socket and sent
+  // document:join with an object instead of a string, which the server
+  // rejected, so other users never received new files.)
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleCreated = (attachment) => {
+      setAttachments((current) => {
+        if (current.some((item) => item._id === attachment._id)) {
+          return current;
+        }
+
+        return [attachment, ...current];
+      });
+    };
+
+    socket.on("attachment:created", handleCreated);
+
+    return () => {
+      socket.off("attachment:created", handleCreated);
+    };
+  }, [socket]);
 
   const handleUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -227,3 +230,4 @@ const Attachments = ({ documentId }) => {
 };
 
 export default Attachments;
+

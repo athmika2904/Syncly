@@ -1,4 +1,3 @@
-
 import ImageKit from "@imagekit/nodejs";
 import Document from "../models/Document.js";
 import WorkspaceMember from "../models/WorkspaceMember.js";
@@ -94,6 +93,8 @@ export const uploadAttachment = async (req, res) => {
       attachment
     });
   } catch (error) {
+    console.error("Upload attachment error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Unable to upload attachment"
@@ -128,6 +129,8 @@ export const getAttachments = async (req, res) => {
       attachments
     });
   } catch (error) {
+    console.error("Fetch attachments error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Unable to fetch attachments"

@@ -8,10 +8,17 @@ export const createComment = async (req, res) => {
     const { documentId } = req.params;
     const { content } = req.body;
 
-    if (!content || !content.trim()) {
+    if (typeof content !== "string" || !content.trim()) {
       return res.status(400).json({
         success: false,
         message: "Comment content is required"
+      });
+    }
+
+    if (content.trim().length > 5000) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment is too long"
       });
     }
 
@@ -54,39 +61,42 @@ export const createComment = async (req, res) => {
       );
     }
 
-    const members = await WorkspaceMember.find({
-      workspace: document.workspace,
-      user: { $ne: req.user.userId }
-    }).select("user");
+    
+    try {
+      const members = await WorkspaceMember.find({
+        workspace: document.workspace,
+        user: { $ne: req.user.userId }
+      }).select("user");
 
-    const notifications = await Promise.all(
-      members.map(async (member) => {
-        const notification = await Notification.create({
-          recipient: member.user,
-          actor: req.user.userId,
-          type: "comment",
-          message: `commented on "${document.title}"`,
-          workspace: document.workspace,
-          document: document._id
-        });
+      await Promise.all(
+        members.map(async (member) => {
+          const notification = await Notification.create({
+            recipient: member.user,
+            actor: req.user.userId,
+            type: "comment",
+            message: `commented on "${document.title}"`,
+            workspace: document.workspace,
+            document: document._id
+          });
 
-        const populatedNotification = await Notification.findById(
-          notification._id
-        )
-          .populate("actor", "name")
-          .populate("workspace", "name")
-          .populate("document", "title");
+          const populatedNotification = await Notification.findById(
+            notification._id
+          )
+            .populate("actor", "name")
+            .populate("workspace", "name")
+            .populate("document", "title");
 
-        if (io) {
-          io.to(`user:${member.user}`).emit(
-            "notification:new",
-            populatedNotification
-          );
-        }
-
-        return populatedNotification;
-      })
-    );
+          if (io) {
+            io.to(`user:${member.user}`).emit(
+              "notification:new",
+              populatedNotification
+            );
+          }
+        })
+      );
+    } catch (notificationError) {
+      console.error("Failed to create notifications:", notificationError);
+    }
 
     return res.status(201).json({
       success: true,
@@ -153,10 +163,17 @@ export const updateComment = async (req, res) => {
     const { commentId } = req.params;
     const { content } = req.body;
 
-    if (!content || !content.trim()) {
+    if (typeof content !== "string" || !content.trim()) {
       return res.status(400).json({
         success: false,
         message: "Comment content is required"
+      });
+    }
+
+    if (content.trim().length > 5000) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment is too long"
       });
     }
 
@@ -234,10 +251,9 @@ export const deleteComment = async (req, res) => {
     const io = req.app.get("io");
 
     if (io) {
-      io.to(`document:${documentId}`).emit(
-        "comment:deleted",
+      io.to(`document:${documentId}`).emit("comment:deleted", {
         commentId
-      );
+      });
     }
 
     return res.status(200).json({

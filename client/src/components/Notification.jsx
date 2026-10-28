@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/Authcontext";
 import api from "../services/api";
+import { SOCKET_URL } from "../config";
 
 const Notifications = () => {
   const { token } = useAuth();
@@ -38,7 +39,7 @@ const Notifications = () => {
 
     fetchNotifications();
 
-    const socket = io("http://localhost:5000", {
+    const socket = io(SOCKET_URL, {
       auth: { token }
     });
 

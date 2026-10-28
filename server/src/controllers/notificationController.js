@@ -1,4 +1,3 @@
-
 import Notification from "../models/Notification.js";
 
 export const getNotifications = async (req, res) => {
@@ -68,7 +67,7 @@ export const markNotificationAsRead = async (req, res) => {
         }
       },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true
       }
     );

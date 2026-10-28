@@ -34,6 +34,8 @@ const Comments = ({ documentId, user, socket }) => {
   useEffect(() => {
     if (!token) return;
 
+    setLoading(true);
+    setComments([]);
     fetchComments();
   }, [documentId, token]);
   useEffect(() => {
@@ -57,7 +59,10 @@ const Comments = ({ documentId, user, socket }) => {
     );
   };
 
-  const handleCommentDeleted = (commentId) => {
+  const handleCommentDeleted = (payload) => {
+    const commentId =
+      typeof payload === "string" ? payload : payload?.commentId;
+
     setComments((prev) =>
       prev.filter((item) => item._id !== commentId)
     );
@@ -91,7 +96,16 @@ const Comments = ({ documentId, user, socket }) => {
         }
       );
 
-      
+      // Add it from the HTTP response too, so it shows even if the live
+      // socket is reconnecting. Duplicates are ignored.
+      const created = response.data.comment;
+
+      setComments((prev) =>
+        prev.some((item) => item._id === created._id)
+          ? prev
+          : [...prev, created]
+      );
+
       setContent("");
     } catch (error) {
       console.error("Failed to add comment", error);
@@ -116,7 +130,11 @@ const Comments = ({ documentId, user, socket }) => {
         }
       );
 
-      
+      const updated = response.data.comment;
+
+      setComments((prev) =>
+        prev.map((item) => (item._id === updated._id ? updated : item))
+      );
 
       setEditingId(null);
       setEditContent("");
@@ -133,7 +151,9 @@ const Comments = ({ documentId, user, socket }) => {
         }
       });
 
-      
+      setComments((prev) =>
+        prev.filter((item) => item._id !== commentId)
+      );
     } catch (error) {
       console.error("Failed to delete comment", error);
     }

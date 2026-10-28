@@ -1,8 +1,8 @@
-
 import Document from "../models/Document.js";
 import Workspace from "../models/Workspace.js";
 import WorkspaceMember from "../models/WorkspaceMember.js";
 import Activity from "../models/Activity.js";
+import { recordDocumentEdit } from "../utils/documentActivity.js";
 
 export const createDocument = async (req, res) => {
   try {
@@ -157,9 +157,23 @@ export const updateDocument = async (req, res) => {
     const { documentId } = req.params;
     const { content } = req.body;
 
-    const document = await Document.findById(documentId);
+    if (typeof content !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Document content must be a string"
+      });
+    }
 
-    if (!document) {
+    if (content.length > 1_000_000) {
+      return res.status(400).json({
+        success: false,
+        message: "Document is too large"
+      });
+    }
+
+    const existing = await Document.findById(documentId).select("workspace");
+
+    if (!existing) {
       return res.status(404).json({
         success: false,
         message: "Document not found"
@@ -167,7 +181,7 @@ export const updateDocument = async (req, res) => {
     }
 
     const membership = await WorkspaceMember.findOne({
-      workspace: document.workspace,
+      workspace: existing.workspace,
       user: req.user.userId
     });
 
@@ -178,27 +192,44 @@ export const updateDocument = async (req, res) => {
       });
     }
 
-    document.content = content;
-    document.updatedBy = req.user.userId;
+    const document = await Document.findByIdAndUpdate(
+      documentId,
+      {
+        $set: {
+          content,
+          updatedBy: req.user.userId
+        },
+        $inc: { version: 1 }
+      },
+      { returnDocument: "after", runValidators: true }
+    );
 
-    await document.save();
-    try {
-  await Activity.create({
-    workspace: document.workspace,
-    user: req.user.userId,
-    type: "document_updated",
-    document: document._id,
-    description: `updated the document "${document.title}"`
-  });
-} catch (activityError) {
-  console.error("Failed to record document update:", activityError);
-}
+    
+    recordDocumentEdit({
+      io: req.app.get("io"),
+      document,
+      userId: req.user.userId
+    });
+
+    
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`document:${documentId}`).emit("document:updated", {
+        content: document.content,
+        version: document.version,
+        updatedBy: req.user.userId
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Document saved successfully",
       document
     });
   } catch (error) {
+    console.error("Update document error:", error);
+
     res.status(500).json({
       success: false,
       message: "Server error"

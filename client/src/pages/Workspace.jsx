@@ -318,6 +318,9 @@ const [activityError, setActivityError] = useState("");
     Recorded workspace events
   </p>
 </div>
+
+        </div>
+
 <div className="mt-8 rounded-lg border border-stone-200 bg-[#faf9f5]">
   <div className="border-b border-stone-200 px-7 py-6">
     <p className="text-xs font-semibold tracking-[0.18em] text-[#68705a]">
@@ -370,8 +373,7 @@ const [activityError, setActivityError] = useState("");
       ))}
     </div>
   )}
-</div>+
-        </div>
+</div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
 
